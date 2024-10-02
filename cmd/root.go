@@ -39,7 +39,7 @@ func Execute() {
 }
 
 func waitforShutDown() {
-	sigch := make(chan os.Signal, 1)
+	sigch := make(chan os.Signal)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	fmt.Println("press ctr+c to continue")
 	<-sigch

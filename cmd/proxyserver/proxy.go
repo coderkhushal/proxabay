@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -31,6 +32,21 @@ func (p *Proxy) Start() error {
 		return err
 	}
 	proxyhandler := httputil.NewSingleHostReverseProxy(url)
+	proxyhandler.ModifyResponse = func(r *http.Response) error {
+		var response map[string]interface{}
+
+		json.NewDecoder(r.Body).Decode(&response)
+
+		responsejson, err := json.Marshal(response)
+
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		fmt.Printf(string(responsejson))
+
+		return nil
+	}
 	p.Server.Addr = p.HttpPort
 	p.Server.Handler = proxyhandler
 	errChan := make(chan error)
@@ -43,7 +59,6 @@ func (p *Proxy) Start() error {
 		}
 		close(errChan) // Close the channel when done
 	}()
-	time.Sleep(time.Second * 1)
 	select {
 	case err := <-errChan:
 		if err != nil {
