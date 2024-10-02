@@ -1,14 +1,18 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"time"
+
+	service "github.com/coderkhushal/proxabay/cmd/services"
 )
 
 type Proxy struct {
@@ -32,23 +36,47 @@ func (p *Proxy) Start() error {
 		return err
 	}
 	proxyhandler := httputil.NewSingleHostReverseProxy(url)
+
+	// proxyhandler.ModifyResponse = func(r *http.Response) error {
+	// }
+	p.Server.Addr = p.HttpPort
+
+	p.Server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		existingcache, err := service.GetCacheForProxy(p.Origin, p.HttpPort)
+		if err != nil {
+			fmt.Println("some error occured while fetching cache")
+
+		} else if existingcache.Origin == "" {
+			fmt.Println("Cache not found , hitting main server")
+		} else {
+			// write response from cache
+			var headers http.Header
+			json.Unmarshal(existingcache.Headers, headers)
+			for key, values := range headers {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
+			}
+			w.Header().Add("Cache", "hit")
+			w.Write(existingcache.Body)
+			return
+		}
+		proxyhandler.ServeHTTP(w, r)
+	})
 	proxyhandler.ModifyResponse = func(r *http.Response) error {
-		var response map[string]interface{}
-
-		json.NewDecoder(r.Body).Decode(&response)
-
-		responsejson, err := json.Marshal(response)
+		// var response map[string]interface{}
+		responsejson, _ := io.ReadAll(r.Body)
+		headerjson, _ := json.Marshal(r.Request.Header) // Convert http.Header to []byte
+		r.Body.Close()
 
 		if err != nil {
 			fmt.Println(err)
 			return err
 		}
-		fmt.Printf(string(responsejson))
-
+		err = service.CreateNewCache(p.Origin, p.HttpPort, headerjson, responsejson)
+		r.Body = io.NopCloser(bytes.NewBuffer(responsejson))
 		return nil
 	}
-	p.Server.Addr = p.HttpPort
-	p.Server.Handler = proxyhandler
 	errChan := make(chan error)
 
 	go func() {
