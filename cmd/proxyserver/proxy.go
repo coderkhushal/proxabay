@@ -43,7 +43,8 @@ func (p *Proxy) Start() error {
 	p.Server.Addr = p.HttpPort
 
 	p.Server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		existingcache, err := service.GetCacheForProxy(p.Origin, p.HttpPort)
+		existingcache, err := service.GetCacheForProxy(p.Origin+r.URL.String(), p.HttpPort)
+
 		if err != nil {
 			fmt.Println("some error occured while fetching cache")
 
@@ -61,15 +62,16 @@ func (p *Proxy) Start() error {
 				}
 			}
 			w.Header().Add("Cache", "hit")
+			w.WriteHeader(existingcache.Status)
 			w.Write(existingcache.Body)
 			switch existingcache.Status {
 			case 200:
-				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port, existingcache.Origin)
+				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port+r.URL.String(), existingcache.Origin)
 				fmt.Println(service.Green, existingcache.Status, "Cache: HIT", service.Yellow, s, service.Reset)
 
 				break
 			default:
-				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port, existingcache.Origin)
+				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port+r.URL.String(), existingcache.Origin)
 				fmt.Println(service.Green, existingcache.Status, "Cache: HIT", service.Yellow, s, service.Reset)
 			}
 			return
@@ -86,19 +88,19 @@ func (p *Proxy) Start() error {
 			fmt.Println(err)
 			return err
 		}
-
-		err = service.CreateNewCache(p.Origin, p.HttpPort, headerjson, responsejson, r.StatusCode)
+		fmt.Println(r.Request.URL)
+		err = service.CreateNewCache(r.Request.URL.String(), p.HttpPort, headerjson, responsejson, r.StatusCode)
 		r.Body = io.NopCloser(bytes.NewBuffer(responsejson))
 
 		switch r.StatusCode {
 		case 200:
-			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, p.HttpPort)
+			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, r.Request.URL)
 			fmt.Println(service.Green, r.StatusCode, "Cache: MISS", service.Yellow, s, service.Reset)
 
 			break
 		default:
 
-			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, p.HttpPort)
+			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, r.Request.URL)
 			fmt.Println(service.Green, r.StatusCode, "Cache: MISS", service.Yellow, s, service.Reset)
 		}
 		return nil
