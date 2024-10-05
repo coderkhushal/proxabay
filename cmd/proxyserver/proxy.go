@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"syscall"
 	"time"
 
 	service "github.com/coderkhushal/proxabay/cmd/services"
@@ -51,7 +52,9 @@ func (p *Proxy) Start() error {
 		} else {
 			// write response from cache
 			var headers http.Header
-			json.Unmarshal(existingcache.Headers, headers)
+
+			json.Unmarshal(existingcache.Headers, &headers)
+
 			for key, values := range headers {
 				for _, value := range values {
 					w.Header().Add(key, value)
@@ -59,6 +62,16 @@ func (p *Proxy) Start() error {
 			}
 			w.Header().Add("Cache", "hit")
 			w.Write(existingcache.Body)
+			switch existingcache.Status {
+			case 200:
+				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port, existingcache.Origin)
+				fmt.Println(service.Green, existingcache.Status, "Cache: HIT", service.Yellow, s, service.Reset)
+
+				break
+			default:
+				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port, existingcache.Origin)
+				fmt.Println(service.Green, existingcache.Status, "Cache: HIT", service.Yellow, s, service.Reset)
+			}
 			return
 		}
 		proxyhandler.ServeHTTP(w, r)
@@ -66,15 +79,28 @@ func (p *Proxy) Start() error {
 	proxyhandler.ModifyResponse = func(r *http.Response) error {
 		// var response map[string]interface{}
 		responsejson, _ := io.ReadAll(r.Body)
-		headerjson, _ := json.Marshal(r.Request.Header) // Convert http.Header to []byte
+		headerjson, _ := json.Marshal(r.Header) // Convert http.Header to []byte
 		r.Body.Close()
 
 		if err != nil {
 			fmt.Println(err)
 			return err
 		}
-		err = service.CreateNewCache(p.Origin, p.HttpPort, headerjson, responsejson)
+
+		err = service.CreateNewCache(p.Origin, p.HttpPort, headerjson, responsejson, r.StatusCode)
 		r.Body = io.NopCloser(bytes.NewBuffer(responsejson))
+
+		switch r.StatusCode {
+		case 200:
+			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, p.HttpPort)
+			fmt.Println(service.Green, r.StatusCode, "Cache: MISS", service.Yellow, s, service.Reset)
+
+			break
+		default:
+
+			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, p.HttpPort)
+			fmt.Println(service.Green, r.StatusCode, "Cache: MISS", service.Yellow, s, service.Reset)
+		}
 		return nil
 	}
 	errChan := make(chan error)
@@ -85,7 +111,9 @@ func (p *Proxy) Start() error {
 		if err := p.Server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			errChan <- err
 		}
+
 		close(errChan) // Close the channel when done
+		service.Sigch <- syscall.SIGINT
 	}()
 	select {
 	case err := <-errChan:

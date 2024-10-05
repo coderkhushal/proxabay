@@ -4,7 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
+	"syscall"
 
 	service "github.com/coderkhushal/proxabay/cmd/services"
 	"github.com/spf13/cobra"
@@ -13,16 +13,11 @@ import (
 // clearcacheCmd represents the clearcache command
 var clearcacheCmd = &cobra.Command{
 	Use:   "clearcache",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Clears the cache of requests",
+	Long:  `Run: proxabay clearcache`,
 	Run: func(cmd *cobra.Command, args []string) {
 		service.ClearCache()
-		fmt.Println("Cache cleared")
+		service.Sigch <- syscall.SIGINT
 
 	},
 }

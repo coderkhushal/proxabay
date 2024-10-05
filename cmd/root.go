@@ -4,12 +4,12 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	server "github.com/coderkhushal/proxabay/cmd/proxyserver"
+	service "github.com/coderkhushal/proxabay/cmd/services"
 	"github.com/spf13/cobra"
 )
 
@@ -39,11 +39,9 @@ func Execute() {
 }
 
 func waitforShutDown() {
-	sigch := make(chan os.Signal)
-	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
-	fmt.Println("press ctr+c to continue")
-	<-sigch
-	fmt.Println("process ended!!")
+	signal.Notify(service.Sigch, syscall.SIGINT, syscall.SIGTERM)
+	<-service.Sigch
+
 }
 
 var ProxyManagerInstance *server.ProxyManger = server.NewProxyManger()

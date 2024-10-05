@@ -7,38 +7,35 @@ import (
 	"fmt"
 	"log"
 
+	service "github.com/coderkhushal/proxabay/cmd/services"
 	"github.com/spf13/cobra"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Adds proxy on your device",
+	Long: `run : proxabay add --origin url_of_your_server --port port_on_which_proxy_should_run_on_your_device
+	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		origin, _ := cmd.Flags().GetString("origin")
 		port, _ := cmd.Flags().GetString("port")
 
 		if origin == "" {
-			log.Fatal("URL is required")
+			fmt.Println(service.Red, "URL is required", service.Reset)
 			return
 		}
 		if port == "" {
-			log.Fatal("port is required")
+			fmt.Println(service.Red, "port is required", service.Reset)
 			return
 		}
-		fmt.Printf("port : %s , origin : %s \n", port, origin)
+		fmt.Println(service.Yellow, "port :", port, " origin :", origin, "\n", service.Reset)
 		err := ProxyManagerInstance.StartNewProxy(origin, ":"+port)
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
-		fmt.Println("Added proxy succesfully")
+		fmt.Println(service.Green, "Added proxy succesfully", service.Reset)
 
 	},
 }

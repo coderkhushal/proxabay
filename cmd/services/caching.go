@@ -10,16 +10,17 @@ type Cache struct {
 	Origin  string
 	Port    string
 	Headers []byte
-
-	Body []byte
+	Status  int
+	Body    []byte
 }
 
-func CreateNewCache(origin string, port string, headers []byte, body []byte) error {
+func CreateNewCache(origin string, port string, headers []byte, body []byte, status int) error {
 	c := Cache{
 		Origin:  origin,
 		Port:    port,
 		Headers: headers,
 		Body:    body,
+		Status:  status,
 	}
 
 	_, err := os.Stat("proxycache.json")
@@ -27,7 +28,7 @@ func CreateNewCache(origin string, port string, headers []byte, body []byte) err
 		os.Create("proxycache.json")
 		emptycachejson, _ := json.Marshal(make([]Cache, 0))
 		os.WriteFile("proxycache.json", emptycachejson, 0644)
-		fmt.Println("created json file for cache")
+		fmt.Println(Green, "created json file for cache", Reset)
 
 	}
 	file, err := os.ReadFile("proxycache.json")
@@ -55,20 +56,20 @@ func CreateNewCache(origin string, port string, headers []byte, body []byte) err
 func GetCacheForProxy(origin string, port string) (Cache, error) {
 	_, err := os.Stat("proxycache.json")
 	if err != nil {
-		fmt.Println("some Error occured while Accessing cache file ")
+		fmt.Println(Red, "some Error occured while Accessing cache file ")
 		return Cache{}, err
 	}
 	file, err := os.ReadFile("proxycache.json")
 
 	if err != nil {
-		fmt.Println("some Error occured while Reading cache file ")
+		fmt.Println(Red, "some Error occured while Reading cache file ", Reset)
 		return Cache{}, err
 	}
 	var filecontent []Cache
 	err = json.Unmarshal(file, &filecontent)
 
 	if err != nil {
-		fmt.Println("some Error occured while reading cache file ")
+		fmt.Println(Red, "some Error occured while reading cache file ", Reset)
 		os.Remove("proxycache.json")
 		return Cache{}, err
 	}
@@ -85,7 +86,7 @@ func ClearCache() {
 
 	_, err := os.Stat("proxycache.json")
 	if err != nil {
-		fmt.Println("some Error occured while Accessing cache file ")
+		fmt.Println(Red, "some Error occured while Accessing cache file ", Reset)
 		return
 	}
 
@@ -95,6 +96,6 @@ func ClearCache() {
 		fmt.Println("Error while clearing cache")
 
 	}
-	fmt.Println("Cache cleared")
+	fmt.Println(Green, "Cache cleared", Reset)
 
 }
