@@ -8,8 +8,9 @@ This proxy is designed to supercharge the development process, providing faster 
 
 
 ## Demo
+[screen-recorder-wed-oct-30-2024-18-03-20.webm](https://github.com/user-attachments/assets/7c28a18a-90df-4450-a1ed-693dfd6667d8)
 
-Insert gif or link to demo
+
 
 
 ## Run Locally
