@@ -5,11 +5,13 @@ package cmd
 
 import (
 	"fmt"
+	"sync"
 
 	service "github.com/coderkhushal/proxabay/cmd/services"
 	"github.com/pterm/pterm"
 	"github.com/pterm/pterm/putils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // addCmd represents the add command
@@ -19,6 +21,7 @@ var addCmd = &cobra.Command{
 	Long: `run : proxabay add --origin url_of_your_server --port port_on_which_proxy_should_run_on_your_device
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
+		wg := sync.WaitGroup{}
 		fmt.Println("\n")
 		pterm.DefaultBigText.WithLetters(putils.LettersFromString("Proxabay")).Render()
 
@@ -33,6 +36,18 @@ var addCmd = &cobra.Command{
 			fmt.Println(service.Red, "port is required", service.Reset)
 			return
 		}
+		var cachevalue string
+		wg.Add(1)
+		go func() {
+			choices := []string{"JSON", "Redis"}
+			value, _ := pterm.DefaultInteractiveSelect.WithOptions(choices).Show()
+			cachevalue = value
+			wg.Done()
+		}()
+		wg.Wait()
+		viper.Set("CacheType", cachevalue)
+		fmt.Println(viper.Get("CacheValue"))
+
 		pterm.NewRGB(0, 255, 255).Printfln("Port : %s , Origin : %s \n ", port, origin)
 
 		err := ProxyManagerInstance.StartNewProxy(origin, ":"+port)
