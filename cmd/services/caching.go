@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/pterm/pterm"
 )
 
 type Cache struct {
@@ -86,16 +88,16 @@ func ClearCache() {
 
 	_, err := os.Stat("proxycache.json")
 	if err != nil {
-		fmt.Println(Red, "some Error occured while Accessing cache file ", Reset)
+		pterm.Error.Println(err)
 		return
 	}
 
 	emptycachejson, _ := json.Marshal(make([]Cache, 0))
 	err = os.WriteFile("proxycache.json", emptycachejson, 0644)
 	if err != nil {
-		fmt.Println("Error while clearing cache")
+		pterm.Error.Println("Error while clearing cache")
 
 	}
-	fmt.Println(Green, "Cache cleared", Reset)
+	pterm.Success.Println(Green, "Cache cleared", Reset)
 
 }

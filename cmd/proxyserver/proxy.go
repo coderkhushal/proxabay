@@ -14,6 +14,7 @@ import (
 	"time"
 
 	service "github.com/coderkhushal/proxabay/cmd/services"
+	"github.com/pterm/pterm"
 )
 
 type Proxy struct {
@@ -33,23 +34,28 @@ func NewProxy(origin string, port string) *Proxy {
 func (p *Proxy) Start() error {
 	url, err := url.Parse(p.Origin)
 	if err != nil {
-		log.Fatal(err)
+		pterm.Error.Println(err)
 		return err
 	}
 	proxyhandler := httputil.NewSingleHostReverseProxy(url)
+	proxyhandler.Director = func(req *http.Request) {
+		req.URL.Scheme = url.Scheme
+		req.URL.Host = url.Host
+		req.Host = url.Host
+		req.Header.Set("User-Agent", "curl/18.0.1")
+		req.Header.Set("Accept", "*/*")
+	}
 
-	// proxyhandler.ModifyResponse = func(r *http.Response) error {
-	// }
 	p.Server.Addr = p.HttpPort
 
 	p.Server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		existingcache, err := service.GetCacheForProxy(p.Origin+r.URL.String(), p.HttpPort)
 
 		if err != nil {
-			fmt.Println("some error occured while fetching cache")
+			pterm.Error.Println(err)
 
 		} else if existingcache.Origin == "" {
-			fmt.Println("Cache not found , hitting main server")
+			pterm.Info.Println("Cache not found , hitting main server")
 		} else {
 			// write response from cache
 			var headers http.Header
@@ -66,13 +72,16 @@ func (p *Proxy) Start() error {
 			w.Write(existingcache.Body)
 			switch existingcache.Status {
 			case 200:
-				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port+r.URL.String(), existingcache.Origin)
-				fmt.Println(service.Green, existingcache.Status, "Cache: HIT", service.Yellow, s, service.Reset)
+				s := pterm.FgYellow.Sprintf("http://localhost%s -> %s", existingcache.Port+r.URL.String(), existingcache.Origin)
 
+				pterm.FgLightGreen.Printf("%d Cache: HIT ", existingcache.Status)
+				pterm.FgYellow.Printfln(s)
 				break
 			default:
-				s := fmt.Sprintf("http://localhost%s -> %s", existingcache.Port+r.URL.String(), existingcache.Origin)
-				fmt.Println(service.Green, existingcache.Status, "Cache: HIT", service.Yellow, s, service.Reset)
+				s := pterm.FgYellow.Sprintf("http://localhost%s -> %s", existingcache.Port+r.URL.String(), existingcache.Origin)
+
+				pterm.FgLightBlue.Printf("%d Cache: HIT ", existingcache.Status)
+				pterm.FgYellow.Printfln(s)
 			}
 			return
 		}
@@ -85,23 +94,25 @@ func (p *Proxy) Start() error {
 		r.Body.Close()
 
 		if err != nil {
-			fmt.Println(err)
+			pterm.Error.Println(err)
 			return err
 		}
-		fmt.Println(r.Request.URL)
 		err = service.CreateNewCache(r.Request.URL.String(), p.HttpPort, headerjson, responsejson, r.StatusCode)
 		r.Body = io.NopCloser(bytes.NewBuffer(responsejson))
 
 		switch r.StatusCode {
 		case 200:
-			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, r.Request.URL)
-			fmt.Println(service.Green, r.StatusCode, "Cache: MISS", service.Yellow, s, service.Reset)
+
+			s := pterm.FgYellow.Sprintf("http://localhost%s -> %s", p.HttpPort, r.Request.URL)
+			pterm.FgLightGreen.Printf("%d Cache: MISS ", r.StatusCode)
+			fmt.Println(s)
 
 			break
 		default:
 
-			s := fmt.Sprintf("http://localhost%s -> %s", p.HttpPort, r.Request.URL)
-			fmt.Println(service.Green, r.StatusCode, "Cache: MISS", service.Yellow, s, service.Reset)
+			s := pterm.FgYellow.Sprintf("http://localhost%s -> %s", p.HttpPort, r.Request.URL)
+			pterm.FgLightBlue.Printf("%d Cache: MISS ", r.StatusCode)
+			fmt.Println(s)
 		}
 		return nil
 	}
@@ -120,7 +131,7 @@ func (p *Proxy) Start() error {
 	select {
 	case err := <-errChan:
 		if err != nil {
-			fmt.Println(err)
+			pterm.Error.Println(err)
 			return err
 		}
 		return nil

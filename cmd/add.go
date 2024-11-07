@@ -5,9 +5,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	service "github.com/coderkhushal/proxabay/cmd/services"
+	"github.com/pterm/pterm"
+	"github.com/pterm/pterm/putils"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +19,9 @@ var addCmd = &cobra.Command{
 	Long: `run : proxabay add --origin url_of_your_server --port port_on_which_proxy_should_run_on_your_device
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("\n")
+		pterm.DefaultBigText.WithLetters(putils.LettersFromString("Proxabay")).Render()
+
 		origin, _ := cmd.Flags().GetString("origin")
 		port, _ := cmd.Flags().GetString("port")
 
@@ -29,13 +33,14 @@ var addCmd = &cobra.Command{
 			fmt.Println(service.Red, "port is required", service.Reset)
 			return
 		}
-		fmt.Println(service.Yellow, "port :", port, " origin :", origin, "\n", service.Reset)
+		pterm.NewRGB(0, 255, 255).Printfln("Port : %s , Origin : %s \n ", port, origin)
+
 		err := ProxyManagerInstance.StartNewProxy(origin, ":"+port)
 		if err != nil {
-			log.Fatal(err)
+			pterm.Error.Println(err)
 			return
 		}
-		fmt.Println(service.Green, "Added proxy succesfully", service.Reset)
+		pterm.Success.Println("Added proxy succesfully")
 
 	},
 }
